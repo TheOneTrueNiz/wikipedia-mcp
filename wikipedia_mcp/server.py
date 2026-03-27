@@ -34,7 +34,12 @@ def create_server(
     # Register tools
     @server.tool()
     def search_wikipedia(query: str, limit: int = 10) -> Dict[str, Any]:
-        """Search Wikipedia for articles matching a query."""
+        """Search Wikipedia for articles matching a query.
+
+        Use for: finding articles, discovering related topics, getting article titles for follow-up lookups.
+        Returns: list of results with title, snippet, pageid, wordcount, timestamp.
+        Tips: Use specific terms for better results. Follow up with get_article or get_summary on interesting titles.
+        """
         logger.info("Tool: Searching Wikipedia for '%s' (limit=%d)", query, limit)
 
         if not query or not query.strip():
@@ -74,20 +79,35 @@ def create_server(
 
     @server.tool()
     def test_wikipedia_connectivity() -> Dict[str, Any]:
-        """Provide diagnostics for Wikipedia API connectivity."""
+        """Test Wikipedia API connectivity and get server diagnostics.
+
+        Use for: troubleshooting when Wikipedia tools fail, verifying API availability.
+        Returns: status, url, language, site_name, server, response_time_ms.
+        Tips: Call this first if other Wikipedia tools return errors.
+        """
         logger.info("Tool: Testing Wikipedia connectivity")
         return wikipedia_client.test_connectivity()
 
     @server.tool()
     def get_article(title: str) -> Dict[str, Any]:
-        """Get the full content of a Wikipedia article."""
+        """Get the full content of a Wikipedia article.
+
+        Use for: comprehensive research, reading complete articles, when you need all details.
+        Returns: full article text with all sections. Can be lengthy for major topics.
+        Tips: Use get_summary instead if you only need an overview. Use exact title from search results.
+        """
         logger.info(f"Tool: Getting article: {title}")
         article = wikipedia_client.get_article(title)
         return article
 
     @server.tool()
     def get_summary(title: str) -> Dict[str, Any]:
-        """Get a summary of a Wikipedia article."""
+        """Get a concise summary of a Wikipedia article (typically 1-2 paragraphs).
+
+        Use for: quick overviews, answering 'what is X?', getting definitions, brief explanations.
+        Returns: title and summary text (introduction section).
+        Tips: Best for general knowledge questions. Use exact article title for best results.
+        """
         logger.info(f"Tool: Getting summary for: {title}")
         summary = wikipedia_client.get_summary(title)
         return {"title": title, "summary": summary}
@@ -98,7 +118,12 @@ def create_server(
         query: str,
         max_length: Annotated[int, Field(title="Max Length")] = 250,
     ) -> Dict[str, Any]:
-        """Get a summary of a Wikipedia article tailored to a specific query."""
+        """Get a targeted summary of a Wikipedia article focused on a specific question or topic.
+
+        Use for: answering specific questions about a topic, extracting relevant info from long articles.
+        Returns: summary tailored to the query, title, and query used.
+        Tips: Provide a clear, specific query. Example: title='Albert Einstein', query='Nobel Prize'.
+        """
         logger.info(f"Tool: Getting query-focused summary for article: {title}, query: {query}")
         # Assuming wikipedia_client has a method like summarize_for_query
         summary = wikipedia_client.summarize_for_query(title, query, max_length=max_length)
@@ -110,7 +135,12 @@ def create_server(
         section_title: str,
         max_length: Annotated[int, Field(title="Max Length")] = 150,
     ) -> Dict[str, Any]:
-        """Get a summary of a specific section of a Wikipedia article."""
+        """Get a summary of a specific section within a Wikipedia article.
+
+        Use for: diving into particular aspects of a topic (e.g., 'History', 'Career', 'Syntax').
+        Returns: summary of the specified section.
+        Tips: Use get_sections first to discover available section titles.
+        """
         logger.info(f"Tool: Getting summary for section: {section_title} in article: {title}")
         # Assuming wikipedia_client has a method like summarize_section
         summary = wikipedia_client.summarize_section(title, section_title, max_length=max_length)
@@ -122,7 +152,12 @@ def create_server(
         topic_within_article: Annotated[str, Field(title="Topic Within Article")] = "",
         count: int = 5,
     ) -> Dict[str, Any]:
-        """Extract key facts from a Wikipedia article, optionally focused on a topic."""
+        """Extract bullet-point facts from a Wikipedia article. Optionally filter by topic.
+
+        Use for: quick facts, trivia, fact-checking, building knowledge summaries.
+        Returns: list of key facts (strings) from the article.
+        Tips: Leave topic_within_article empty for general facts, or specify to focus (e.g., 'awards', 'early life').
+        """
         logger.info(f"Tool: Extracting key facts for article: {title}, topic: {topic_within_article}")
         # Convert empty string to None for backward compatibility
         topic = topic_within_article if topic_within_article.strip() else None
@@ -136,28 +171,48 @@ def create_server(
 
     @server.tool()
     def get_related_topics(title: str, limit: int = 10) -> Dict[str, Any]:
-        """Get topics related to a Wikipedia article based on links and categories."""
+        """Discover topics related to a Wikipedia article based on its links and categories.
+
+        Use for: exploring related concepts, finding connected topics, building knowledge graphs.
+        Returns: list of related topics with title, summary, url, and relationship type.
+        Tips: Great for follow-up research or when user wants to learn about connected subjects.
+        """
         logger.info(f"Tool: Getting related topics for: {title}")
         related = wikipedia_client.get_related_topics(title, limit=limit)
         return {"title": title, "related_topics": related}
 
     @server.tool()
     def get_sections(title: str) -> Dict[str, Any]:
-        """Get the sections of a Wikipedia article."""
+        """Get the table of contents (section structure) of a Wikipedia article.
+
+        Use for: discovering what topics an article covers, planning which sections to read.
+        Returns: hierarchical list of sections with title, level, text preview, and subsections.
+        Tips: Call this before summarize_article_section to find valid section titles.
+        """
         logger.info(f"Tool: Getting sections for: {title}")
         sections = wikipedia_client.get_sections(title)
         return {"title": title, "sections": sections}
 
     @server.tool()
     def get_links(title: str) -> Dict[str, Any]:
-        """Get the links contained within a Wikipedia article."""
+        """Get all internal Wikipedia links from an article.
+
+        Use for: discovering all topics mentioned in an article, finding articles to explore next.
+        Returns: list of article titles that are linked from this article.
+        Tips: Can return many links (100s). Use get_related_topics for a curated subset instead.
+        """
         logger.info(f"Tool: Getting links for: {title}")
         links = wikipedia_client.get_links(title)
         return {"title": title, "links": links}
 
     @server.tool()
     def get_coordinates(title: str) -> Dict[str, Any]:
-        """Get the coordinates of a Wikipedia article."""
+        """Get geographic coordinates (latitude/longitude) for location-based Wikipedia articles.
+
+        Use for: mapping, location lookups, geographic queries about places, cities, landmarks.
+        Returns: coordinates with latitude, longitude, globe, and region info. Empty if not a place.
+        Tips: Works for cities, countries, landmarks, geographic features. Returns empty for non-geographic articles.
+        """
         logger.info(f"Tool: Getting coordinates for: {title}")
         coordinates = wikipedia_client.get_coordinates(title)
         return coordinates
